@@ -1,0 +1,71 @@
+---
+# tasks file for ansible-role-docker-container-registry
+
+- name: docker_container - {{ docker_container_registry_volume_dir }}/auth
+  ansible.builtin.file:
+    path: "{{ docker_container_registry_volume_dir }}/auth"
+    state: directory
+  when: 
+   - docker_container_registry_basic_auth_enable is defined
+   - docker_container_registry_basic_auth_enable
+
+- name: docker_container {{ docker_image_registry_name }} htpasswd 
+  community.general.htpasswd:
+    crypt_scheme: bcrypt
+    name: "{{ docker_container_registry_basic_auth_username }}"
+    path: "{{ docker_container_registry_volume_dir }}/auth/htpasswd"
+    password: "{{ docker_container_registry_basic_auth_password }}"
+    state: present
+  when: 
+    - docker_container_registry_basic_auth_enable is defined
+    - docker_container_registry_basic_auth_enable
+
+- name: docker_image pull {{ docker_image_registry_name }}
+  community.docker.docker_image:
+    name: '{{ docker_image_registry_name }}'
+    source: pull
+    # Select platform for pulling. If not specified, will pull whatever docker prefers.
+    pull:
+      platform: amd64
+  when: 
+    - docker_image_registry_pull is defined
+
+- name: docker_network {{ docker_container_registry_name }}
+  community.docker.docker_network:
+    name: "{{ docker_network_registry_name }}"
+    driver: "{{ docker_network_registry_driver | default('bridge') }}"
+    attachable: "{{ docker_network_registry_attachable | default('yes') }}"
+    enable_ipv6: "{{ docker_network_registry_enable_ipv6 | default('no') }}"
+    internal: "{{ docker_network_registry_internal | default('no') }}"
+    state: present
+
+
+- name: docker_container {{ docker_container_registry_name }}
+  community.docker.docker_container:
+    name: "{{ docker_container_registry_name }}"
+    image: "{{ docker_container_registry_image }}"
+    state: "{{ docker_container_registry_state | default('started') }}"
+    recreate: "{{ docker_container_registry_recreate | default('no') }}"
+    restart: "{{ docker_container_registry_restart | default('no') }}"
+    restart_policy: "{{ docker_container_registry_restart_policy | default('always') }}"
+    container_default_behavior: no_defaults
+    auto_remove: "{{ docker_container_registry_auto_remove | default('no') }}"
+    detach: "{{ docker_container_registry_detach | default('yes') }}"
+    init: "{{ docker_container_registry_init | default('no') }}"
+    interactive: "{{ docker_container_registry_interactive | default('no') }}"
+    keep_volumes: "{{ docker_container_registry_keep_volumes | default('yes') }}"
+    memory: "{{ docker_container_registry_memory | default('0') }}"
+    paused: "{{ docker_container_registry_paused | default('no') }}"
+    privileged: "{{ docker_container_registry_privileged | default('no') }}"
+    read_only: "{{ docker_container_registry_read_only | default('no') }}"
+    tty: "{{ docker_container_registry_tty | default('no') }}"
+    env_file: "{{ docker_container_registry_env_file | default(omit) }}"
+    env: "{{ docker_container_registry_env | default(omit) }}"
+    volumes: "{{ docker_container_registry_volumes | default(omit) }}"
+    labels: "{{ docker_container_registry_labels | default(omit) }}"
+    networks_cli_compatible: "{{ docker_container_registry_networks_cli_compatible | default('yes') }}"
+    network_mode: "{{ docker_network_registry_name }}"
+    pull: "{{ docker_container_registry_pull | default('no') }}"
+    purge_networks: "{{ docker_container_registry_purge_networks | default('yes') }}"
+    networks: "{{ docker_container_registry_networks }}"
+    published_ports: "{{ docker_container_registry_ports | default(omit) }}"
